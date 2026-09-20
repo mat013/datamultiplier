@@ -1,0 +1,156 @@
+seed: 42
+
+# Configuration for test data generation
+# Row counts can be customized before running 'datamultiplier generate'
+# Faker rules determine how data is generated for each column
+# See https://github.com/joke2k/faker for available faker methods
+
+tables:
+  users:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      username:
+        type: varchar
+        faker: user_name
+        unique: true
+      email:
+        type: varchar
+        faker: email
+        unique: true
+      full_name:
+        type: varchar
+        faker: name
+      phone:
+        type: varchar
+        faker: phone_number
+        nullable: true
+      created_at:
+        type: timestamp
+        faker: date_time
+      is_active:
+        type: boolean
+        faker: boolean
+
+  organizations:
+    row_count: 500
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      name:
+        type: varchar
+        faker: company
+      website:
+        type: varchar
+        faker: url
+        nullable: true
+      country:
+        type: varchar
+        faker: country
+      created_at:
+        type: timestamp
+        faker: date_time
+
+  user_organizations:
+    row_count: 30000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      user_id:
+        type: integer
+        foreign_key: users.id
+      organization_id:
+        type: integer
+        foreign_key: organizations.id
+      role:
+        type: varchar
+        faker: "random_element(['admin', 'member', 'viewer'])"
+      joined_at:
+        type: timestamp
+        faker: date_time
+
+  projects:
+    row_count: 5000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      organization_id:
+        type: integer
+        foreign_key: organizations.id
+      name:
+        type: varchar
+        faker: word
+      description:
+        type: text
+        faker: text
+        nullable: true
+      status:
+        type: varchar
+        faker: "random_element(['active', 'archived', 'planning'])"
+      created_at:
+        type: timestamp
+        faker: date_time
+
+  tasks:
+    row_count: 100000
+    columns:
+      id:
+        type: bigint
+        primary_key: true
+        auto_increment: true
+      project_id:
+        type: integer
+        foreign_key: projects.id
+      assigned_to:
+        type: integer
+        foreign_key: users.id
+        nullable: true
+      title:
+        type: varchar
+        faker: word
+      description:
+        type: text
+        faker: text
+        nullable: true
+      status:
+        type: varchar
+        faker: "random_element(['todo', 'in_progress', 'done'])"
+      priority:
+        type: varchar
+        faker: "random_element(['low', 'medium', 'high'])"
+      created_at:
+        type: timestamp
+        faker: date_time
+      completed_at:
+        type: timestamp
+        faker: date_time
+        nullable: true
+
+  comments:
+    row_count: 200000
+    columns:
+      id:
+        type: bigint
+        primary_key: true
+        auto_increment: true
+      task_id:
+        type: bigint
+        foreign_key: tasks.id
+      user_id:
+        type: integer
+        foreign_key: users.id
+      content:
+        type: text
+        faker: text
+      created_at:
+        type: timestamp
+        faker: date_time
