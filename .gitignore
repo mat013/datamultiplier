@@ -27,3 +27,8 @@ venv/
 env/
 *.yaml~
 *.yaml.bak
+
+# Generated output files
+data_dump/
+*.csv
+schema.yaml
