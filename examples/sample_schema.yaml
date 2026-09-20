@@ -24,14 +24,21 @@ tables:
       full_name:
         type: varchar
         faker: name
+      age:
+        type: integer
+        min: 18
+        max: 120
       phone:
         type: varchar
         faker: phone_number
         nullable: true
+      status:
+        type: varchar
+        values: ['active', 'inactive', 'suspended']
       created_at:
         type: timestamp
         faker: date_time
-      is_active:
+      is_admin:
         type: boolean
         faker: boolean
 
@@ -123,10 +130,14 @@ tables:
         nullable: true
       status:
         type: varchar
-        faker: "random_element(['todo', 'in_progress', 'done'])"
+        values: ['todo', 'in_progress', 'done', 'blocked']
       priority:
         type: varchar
-        faker: "random_element(['low', 'medium', 'high'])"
+        values: ['low', 'medium', 'high', 'critical']
+      estimated_hours:
+        type: numeric
+        min: 1
+        max: 100
       created_at:
         type: timestamp
         faker: date_time

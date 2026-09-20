@@ -18,6 +18,9 @@ class ColumnConfig:
     foreign_key: Optional[str] = None  # "table.column" format
     faker_rule: Optional[str] = None  # faker method name or expression
     default_value: Optional[Any] = None
+    values: Optional[list[str]] = None  # List of allowed values for enums/choices
+    min_value: Optional[Any] = None  # Minimum value for numeric types
+    max_value: Optional[Any] = None  # Maximum value for numeric types
 
 
 @dataclass
@@ -70,6 +73,9 @@ class GenerationConfig:
                     foreign_key=col_data.get("foreign_key"),
                     faker_rule=col_data.get("faker"),
                     default_value=col_data.get("default"),
+                    values=col_data.get("values"),
+                    min_value=col_data.get("min"),
+                    max_value=col_data.get("max"),
                 )
                 columns.append(col)
 
@@ -110,6 +116,12 @@ class GenerationConfig:
                     col_dict["faker"] = col.faker_rule
                 if col.default_value is not None:
                     col_dict["default"] = col.default_value
+                if col.values:
+                    col_dict["values"] = col.values
+                if col.min_value is not None:
+                    col_dict["min"] = col.min_value
+                if col.max_value is not None:
+                    col_dict["max"] = col.max_value
                 columns[col.name] = col_dict
 
             data["tables"][table.name] = {

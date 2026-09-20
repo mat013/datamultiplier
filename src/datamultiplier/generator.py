@@ -73,6 +73,14 @@ class DataGenerator:
         if col.foreign_key:
             return self._generate_foreign_key_value(col.foreign_key)
 
+        # Handle enum/choice values (specific list)
+        if col.values:
+            return random.choice(col.values)
+
+        # Handle min/max range for numeric values
+        if col.min_value is not None or col.max_value is not None:
+            return self._generate_range_value(col)
+
         # Use faker rule if provided
         if col.faker_rule:
             return self._evaluate_faker_rule(col.faker_rule, col.type)
@@ -161,6 +169,23 @@ class DataGenerator:
 
         # Fallback
         return self.fake.word()
+
+    def _generate_range_value(self, col: ColumnConfig) -> Any:
+        """Generate a value within a specified min/max range."""
+        min_val = col.min_value if col.min_value is not None else 0
+        max_val = col.max_value if col.max_value is not None else 999999
+
+        col_type = col.type.lower()
+
+        if col_type.startswith("integer") or col_type.startswith("bigint"):
+            return random.randint(int(min_val), int(max_val))
+
+        if col_type.startswith("numeric") or col_type.startswith("decimal"):
+            val = random.uniform(float(min_val), float(max_val))
+            return Decimal(str(round(val, 2)))
+
+        # Fallback for other types
+        return self._generate_by_type(col.type)
 
     def _generate_by_type(self, column_type: str) -> Any:
         """Generate a value based on column type."""
