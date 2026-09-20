@@ -1,0 +1,902 @@
+seed: 42
+tables:
+  account:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      owner_id:
+        type: integer
+        foreign_key: app_user.id
+        faker: random_int(0, 999999)
+      tax_regime_id:
+        type: integer
+        faker: random_int(0, 999999)
+      account_number:
+        type: character varying
+        faker: text
+      name:
+        type: character varying
+        faker: name
+      broker:
+        type: character varying
+        nullable: true
+        faker: text
+      balance:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  account_daily_snapshot:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      account_id:
+        type: integer
+        foreign_key: account.id
+        faker: random_int(0, 999999)
+      snapshot_date:
+        type: date
+        faker: date
+      data:
+        type: jsonb
+        faker: word
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  alarm:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      user_id:
+        type: integer
+        foreign_key: app_user.id
+        faker: random_int(0, 999999)
+      name:
+        type: character varying
+        faker: name
+      comment:
+        type: text
+        nullable: true
+        faker: text
+      expression:
+        type: text
+        faker: text
+      status:
+        type: character varying
+        faker: random_element(['active', 'inactive', 'pending'])
+      triggered_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      seen:
+        type: boolean
+        faker: boolean
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  app_user:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      username:
+        type: character varying
+        faker: user_name
+      display_name:
+        type: character varying
+        nullable: true
+        faker: text
+      email:
+        type: character varying
+        nullable: true
+        faker: email
+      password_hash:
+        type: character varying
+        nullable: true
+        faker: text
+      is_current:
+        type: boolean
+        faker: boolean
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  batch_job_failure:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      job_name:
+        type: character varying
+        faker: text
+      resource_type:
+        type: character varying
+        faker: text
+      resource_id:
+        type: integer
+        faker: random_int(0, 999999)
+      error:
+        type: text
+        faker: text
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  config:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      key:
+        type: character varying
+        faker: text
+      value:
+        type: character varying
+        faker: text
+      description:
+        type: text
+        nullable: true
+        faker: text
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  corporate_action:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      instrument_id:
+        type: integer
+        foreign_key: instrument.id
+        faker: random_int(0, 999999)
+      action_type:
+        type: character varying
+        faker: text
+      ex_dividend_date:
+        type: date
+        nullable: true
+        faker: date
+      record_date:
+        type: date
+        nullable: true
+        faker: date
+      payment_date:
+        type: date
+        faker: date
+      per_share:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      fx_rate:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      description:
+        type: text
+        nullable: true
+        faker: text
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  corporate_action_earned:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      corporate_action_id:
+        type: integer
+        foreign_key: corporate_action.id
+        faker: random_int(0, 999999)
+      account_id:
+        type: integer
+        foreign_key: account.id
+        faker: random_int(0, 999999)
+      shares_owned_on_ex_dividend_date:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      amount_earned:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      currency:
+        type: character varying
+        faker: text
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  event:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      user_id:
+        type: integer
+        foreign_key: app_user.id
+        faker: random_int(0, 999999)
+      name:
+        type: character varying
+        faker: name
+      comment:
+        type: text
+        nullable: true
+        faker: text
+      status:
+        type: character varying
+        faker: random_element(['active', 'inactive', 'pending'])
+      last_triggered_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      repeat_pattern:
+        type: text
+        nullable: true
+        faker: text
+      reminder_pattern:
+        type: text
+        nullable: true
+        faker: text
+      allow_snooze:
+        type: boolean
+        faker: boolean
+      public_id:
+        type: uuid
+        faker: word
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  event_snooze:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      event_id:
+        type: integer
+        foreign_key: event.id
+        faker: random_int(0, 999999)
+      snoozed_at:
+        type: timestamp with time zone
+        faker: date_time
+      snoozed_until:
+        type: timestamp with time zone
+        faker: date_time
+      snooze_length_days:
+        type: integer
+        faker: random_int(0, 999999)
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  exchange:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      code:
+        type: character varying
+        faker: text
+      name:
+        type: character varying
+        faker: name
+      country:
+        type: character varying
+        nullable: true
+        faker: country
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  fx_daily_snapshot:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      snapshot_date:
+        type: date
+        faker: date
+      data:
+        type: jsonb
+        faker: word
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  generated_report:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      owner_id:
+        type: integer
+        foreign_key: app_user.id
+        faker: random_int(0, 999999)
+      template_id:
+        type: integer
+        foreign_key: report_template.id
+        faker: random_int(0, 999999)
+      generated_content:
+        type: text
+        faker: text
+      edited_content:
+        type: text
+        nullable: true
+        faker: text
+      notes:
+        type: text
+        nullable: true
+        faker: text
+      ai_conclusion:
+        type: text
+        nullable: true
+        faker: text
+      generated_date:
+        type: date
+        faker: date
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      template_version_id:
+        type: integer
+        nullable: true
+        foreign_key: template_version.id
+        faker: random_int(0, 999999)
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  instrument:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      exchange_id:
+        type: integer
+        foreign_key: exchange.id
+        faker: random_int(0, 999999)
+      isin:
+        type: character varying
+        faker: text
+      ticker_nordnet:
+        type: character varying
+        faker: text
+      ticker_yahoo:
+        type: character varying
+        nullable: true
+        faker: text
+      name:
+        type: character varying
+        faker: name
+      instrument_type:
+        type: character varying
+        faker: text
+      denomination:
+        type: character varying
+        faker: text
+      category:
+        type: character varying
+        nullable: true
+        faker: text
+      note:
+        type: text
+        nullable: true
+        faker: text
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      is_core:
+        type: boolean
+        nullable: true
+        faker: boolean
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  instrument_labels:
+    row_count: 10000
+    columns:
+      instrument_id:
+        type: integer
+        primary_key: true
+        foreign_key: instrument.id
+      label_id:
+        type: integer
+        foreign_key: labels.id
+        faker: random_int(0, 999999)
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  labels:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      name:
+        type: character varying
+        faker: name
+      name_lower:
+        type: character varying
+        faker: text
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  milestone:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      account_id:
+        type: integer
+        foreign_key: account.id
+        faker: random_int(0, 999999)
+      name:
+        type: character varying
+        faker: name
+      target_value:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      current_value:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      achieved_date:
+        type: date
+        nullable: true
+        faker: date
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      expression:
+        type: text
+        nullable: true
+        faker: text
+      status:
+        type: character varying
+        faker: random_element(['active', 'inactive', 'pending'])
+      triggered_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      seen:
+        type: boolean
+        faker: boolean
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  milestone_history:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      milestone_id:
+        type: integer
+        foreign_key: milestone.id
+        faker: random_int(0, 999999)
+      value:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      recorded_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  movement:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      account_id:
+        type: integer
+        foreign_key: account.id
+        faker: random_int(0, 999999)
+      type:
+        type: character varying
+        faker: text
+      transaction_date:
+        type: date
+        faker: date
+      amount_base:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      cash_balance_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      description:
+        type: text
+        nullable: true
+        faker: text
+      realised_return:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      unrealised_return:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      execution_sequence:
+        type: integer
+        faker: random_int(0, 999999)
+      gak:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      holding:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      total_purchase_amount:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      acquisition_cost_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      invested_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      invested_ytd_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      closing_price:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      instrument_id:
+        type: integer
+        nullable: true
+        foreign_key: instrument.id
+        faker: random_int(0, 999999)
+      realised_return_ytd_gain:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      realised_return_ytd_loss:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      realised_accumulated_gain:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      realised_accumulated_loss:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      fx_to_base:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      invested_accumulated_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      unrealised_locked_taxed_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      unrealised_return_taxed_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      gak_base:
+        type: numeric
+        nullable: true
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+  price_daily_snapshot:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      snapshot_date:
+        type: date
+        faker: date
+      data:
+        type: jsonb
+        faker: word
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  report_template:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      owner_id:
+        type: integer
+        foreign_key: app_user.id
+        faker: random_int(0, 999999)
+      name:
+        type: character varying
+        faker: name
+      markdown_content:
+        type: text
+        faker: text
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+  tax_regime:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      code:
+        type: character varying
+        faker: text
+      name:
+        type: character varying
+        faker: name
+      description:
+        type: text
+        nullable: true
+        faker: text
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  template_version:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      template_id:
+        type: integer
+        foreign_key: report_template.id
+        faker: random_int(0, 999999)
+      content:
+        type: text
+        nullable: true
+        faker: text
+      is_active:
+        type: boolean
+        nullable: true
+        faker: boolean
+      version_date:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+  trade:
+    row_count: 10000
+    columns:
+      id:
+        type: integer
+        primary_key: true
+        auto_increment: true
+      public_id:
+        type: uuid
+        faker: word
+      trade_date:
+        type: date
+        faker: date
+      direction:
+        type: character varying
+        faker: text
+      quantity:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      price_per_unit:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      trade_price:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      trade_price_base:
+        type: numeric
+        faker: pydecimal(positive=True, min_value=0, max_value=999999, right_digits=2)
+      version:
+        type: integer
+        faker: random_int(0, 999999)
+      created_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      updated_at:
+        type: timestamp with time zone
+        nullable: true
+        faker: date_time
+      movement_id:
+        type: integer
+        foreign_key: movement.id
+        faker: random_int(0, 999999)

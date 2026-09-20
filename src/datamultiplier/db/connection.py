@@ -144,26 +144,28 @@ class DatabaseConnection:
         """Get foreign key constraints for a table."""
         query = """
             SELECT
-                constraint_name,
-                column_name,
-                foreign_table_name,
-                foreign_column_name
-            FROM information_schema.referential_constraints
-            JOIN information_schema.key_column_usage ON
-                referential_constraints.constraint_name = key_column_usage.constraint_name
-            WHERE table_name = %s
+                rc.constraint_name,
+                kcu.column_name,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name
+            FROM information_schema.referential_constraints rc
+            JOIN information_schema.key_column_usage kcu
+                ON rc.constraint_name = kcu.constraint_name
+            JOIN information_schema.constraint_column_usage ccu
+                ON rc.unique_constraint_name = ccu.constraint_name
+            WHERE kcu.table_name = %s
         """
         return self.execute(query, (table_name,))
 
     def get_primary_key(self, table_name: str) -> Optional[str]:
         """Get the primary key column name for a table."""
         query = """
-            SELECT column_name
-            FROM information_schema.table_constraints
-            JOIN information_schema.key_column_usage
-                ON table_constraints.constraint_name = key_column_usage.constraint_name
-            WHERE table_constraints.table_name = %s
-                AND table_constraints.constraint_type = 'PRIMARY KEY'
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+                ON tc.constraint_name = kcu.constraint_name
+            WHERE tc.table_name = %s
+                AND tc.constraint_type = 'PRIMARY KEY'
             LIMIT 1
         """
         result = self.execute(query, (table_name,))
