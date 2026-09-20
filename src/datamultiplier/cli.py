@@ -12,7 +12,27 @@ from .config import GenerationConfig
 
 @click.group()
 def main() -> None:
-    """PostgreSQL test data generator."""
+    """PostgreSQL test data generator for large-scale relational datasets.
+
+    Quick Start:
+        1. Inspect your database schema:
+            datamultiplier inspect --db-url postgresql://user:pass@localhost/db
+
+        2. Edit schema.yaml to customize row counts and data generation rules
+
+        3. Generate test data:
+            datamultiplier generate --db-url postgresql://user:pass@localhost/db \\
+                --config schema.yaml --rows 1000000
+
+        4. Export data:
+            datamultiplier dump-all --db-url postgresql://user:pass@localhost/db \\
+                --output-dir ./backups
+
+    Use --help with any command for more details:
+        datamultiplier inspect --help
+        datamultiplier generate --help
+        datamultiplier dump --help
+    """
     pass
 
 
