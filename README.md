@@ -58,3 +58,4 @@ mypy src/
 ## License
 
 MIT
+

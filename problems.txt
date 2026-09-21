@@ -1,0 +1,6 @@
+Jeg skal også kunne tage et schema hvis man ikke vil bruge default schema
+
+Hvordan specificerer man udvalgte tilstande. f.eks. ikke alle tabeller skal nødvendigvis populeres. (aproachen er for naiv)
+
+
+På en eller anden måde har man brug for et tilstandsdiagram
