@@ -29,7 +29,7 @@ def main() -> None:
             datamultiplier dump-all --db-url postgresql://user:pass@localhost/db \\
                 --schema my_schema --output-dir ./backups
 
-    Schema: Use --schema to specify a non-default schema (defaults to 'public')
+    Schema: By default, uses the user's search_path. Use --schema to override.
 
     Use --help with any command for more details:
         datamultiplier inspect --help
@@ -48,8 +48,8 @@ def main() -> None:
 )
 @click.option(
     "--schema",
-    default="public",
-    help="Database schema name (default: public)",
+    default=None,
+    help="Database schema name (default: user's search_path)",
 )
 @click.option(
     "--output",
@@ -101,8 +101,8 @@ def inspect(db_url: str, schema: str, output: str) -> None:
 )
 @click.option(
     "--schema",
-    default="public",
-    help="Database schema name (default: public)",
+    default=None,
+    help="Database schema name (default: user's search_path)",
 )
 @click.option(
     "--config",
@@ -181,8 +181,8 @@ def generate(db_url: str, schema: str, config: str, rows: int, seed: int) -> Non
 )
 @click.option(
     "--schema",
-    default="public",
-    help="Database schema name (default: public)",
+    default=None,
+    help="Database schema name (default: user's search_path)",
 )
 @click.option(
     "--table",
@@ -248,8 +248,8 @@ def dump(db_url: str, schema: str, table: str, output: str, format: str, where: 
 )
 @click.option(
     "--schema",
-    default="public",
-    help="Database schema name (default: public)",
+    default=None,
+    help="Database schema name (default: user's search_path)",
 )
 @click.option(
     "--output-dir",

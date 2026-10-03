@@ -9,29 +9,48 @@ from typing import Optional, Generator
 class DatabaseConnection:
     """Manages PostgreSQL connections and connection pooling."""
 
-    def __init__(self, db_url: str, min_connections: int = 1, max_connections: int = 5, schema: str = "public"):
+    def __init__(self, db_url: str, min_connections: int = 1, max_connections: int = 5, schema: Optional[str] = None):
         """Initialize connection pool.
 
         Args:
             db_url: PostgreSQL connection URL (postgresql://user:pass@host/db)
             min_connections: Minimum pool size
             max_connections: Maximum pool size
-            schema: Schema name to use (default: 'public')
+            schema: Schema name to use (None = use user's default search_path)
         """
         self.db_url = db_url
-        self.schema = schema
+        self._requested_schema = schema
+        self._schema: Optional[str] = None
         self.pool: Optional[pool.SimpleConnectionPool] = None
         self.min_connections = min_connections
         self.max_connections = max_connections
 
+    @property
+    def schema(self) -> str:
+        """Get the effective schema name."""
+        if self._schema is None:
+            raise RuntimeError("Schema not determined yet. Call connect() first.")
+        return self._schema
+
     def connect(self) -> None:
-        """Create connection pool."""
+        """Create connection pool and determine schema."""
         if self.pool is None:
             self.pool = pool.SimpleConnectionPool(
                 self.min_connections,
                 self.max_connections,
                 self.db_url,
             )
+
+        # Determine the effective schema on first connection
+        if self._schema is None:
+            if self._requested_schema:
+                self._schema = self._requested_schema
+            else:
+                # Use the user's default schema from search_path
+                with self.get_cursor() as cursor:
+                    cursor.execute("SELECT current_schema()")
+                    result = cursor.fetchone()
+                    self._schema = result[0] if result and result[0] else "public"
 
     def disconnect(self) -> None:
         """Close all connections in pool."""
