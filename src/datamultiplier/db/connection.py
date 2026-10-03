@@ -9,15 +9,17 @@ from typing import Optional, Generator
 class DatabaseConnection:
     """Manages PostgreSQL connections and connection pooling."""
 
-    def __init__(self, db_url: str, min_connections: int = 1, max_connections: int = 5):
+    def __init__(self, db_url: str, min_connections: int = 1, max_connections: int = 5, schema: str = "public"):
         """Initialize connection pool.
 
         Args:
             db_url: PostgreSQL connection URL (postgresql://user:pass@host/db)
             min_connections: Minimum pool size
             max_connections: Maximum pool size
+            schema: Schema name to use (default: 'public')
         """
         self.db_url = db_url
+        self.schema = schema
         self.pool: Optional[pool.SimpleConnectionPool] = None
         self.min_connections = min_connections
         self.max_connections = max_connections
@@ -135,10 +137,10 @@ class DatabaseConnection:
                 column_default,
                 character_maximum_length
             FROM information_schema.columns
-            WHERE table_name = %s
+            WHERE table_schema = %s AND table_name = %s
             ORDER BY ordinal_position
         """
-        return self.execute(query, (table_name,))
+        return self.execute(query, (self.schema, table_name))
 
     def get_foreign_keys(self, table_name: str) -> list[dict]:
         """Get foreign key constraints for a table."""
@@ -151,11 +153,12 @@ class DatabaseConnection:
             FROM information_schema.referential_constraints rc
             JOIN information_schema.key_column_usage kcu
                 ON rc.constraint_name = kcu.constraint_name
+                AND kcu.table_schema = %s
             JOIN information_schema.constraint_column_usage ccu
                 ON rc.unique_constraint_name = ccu.constraint_name
             WHERE kcu.table_name = %s
         """
-        return self.execute(query, (table_name,))
+        return self.execute(query, (self.schema, table_name))
 
     def get_primary_key(self, table_name: str) -> Optional[str]:
         """Get the primary key column name for a table."""
@@ -164,11 +167,12 @@ class DatabaseConnection:
             FROM information_schema.table_constraints tc
             JOIN information_schema.key_column_usage kcu
                 ON tc.constraint_name = kcu.constraint_name
-            WHERE tc.table_name = %s
+            WHERE tc.table_schema = %s
+                AND tc.table_name = %s
                 AND tc.constraint_type = 'PRIMARY KEY'
             LIMIT 1
         """
-        result = self.execute(query, (table_name,))
+        result = self.execute(query, (self.schema, table_name))
         return result[0]["column_name"] if result else None
 
     def get_all_tables(self) -> list[str]:
@@ -176,8 +180,8 @@ class DatabaseConnection:
         query = """
             SELECT table_name
             FROM information_schema.tables
-            WHERE table_schema = 'public'
+            WHERE table_schema = %s
             ORDER BY table_name
         """
-        result = self.execute(query)
+        result = self.execute(query, (self.schema,))
         return [row["table_name"] for row in result]
