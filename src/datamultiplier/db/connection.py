@@ -50,7 +50,7 @@ class DatabaseConnection:
                 with self.get_cursor() as cursor:
                     cursor.execute("SELECT current_schema()")
                     result = cursor.fetchone()
-                    self._schema = result[0] if result and result[0] else "public"
+                    self._schema = result["current_schema"] if result and result["current_schema"] else "public"
 
     def disconnect(self) -> None:
         """Close all connections in pool."""
