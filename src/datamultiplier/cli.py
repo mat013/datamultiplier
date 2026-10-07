@@ -1,6 +1,7 @@
 """Command-line interface for datamultiplier."""
 
 import click
+import os
 from pathlib import Path
 
 from .db.connection import DatabaseConnection
@@ -8,6 +9,7 @@ from .inspector import SchemaInspector
 from .generator import DataGenerator
 from .dumper import DataDumper
 from .config import GenerationConfig
+from .objectifier import RelationIndexer
 
 
 @click.group()
@@ -249,21 +251,33 @@ def dump(db_url: str, schema: str, table: str, output: str, format: str, where: 
     help="Database schema name (default: user's search_path)",
 )
 @click.option(
+    "--config",
+    type=click.Path(exists=True),
+    default=None,
+    help="YAML config file to specify which tables to dump (default: all tables)",
+)
+@click.option(
     "--output-dir",
     type=click.Path(),
     default="./data_dump",
     help="Output directory for CSV files",
 )
-def dump_all(db_url: str, schema: str, output_dir: str) -> None:
-    """Export all tables to CSV files.
+def dump_all(db_url: str, schema: str, config: str, output_dir: str) -> None:
+    """Export tables to CSV files.
 
-    This command creates separate CSV files for each table in the database.
+    By default exports all tables in the database. If --config is provided,
+    only exports tables defined in that YAML configuration file.
 
     Example:
+        # Export all tables
         datamultiplier dump-all --db-url postgresql://user:pass@localhost/mydb \\
             --output-dir ./backups
+
+        # Export only tables in schema.yaml
+        datamultiplier dump-all --db-url postgresql://user:pass@localhost/mydb \\
+            --config schema.yaml --output-dir ./backups
     """
-    click.echo(f"Exporting all tables from schema '{schema}'...")
+    click.echo(f"Exporting tables from schema '{schema}'...")
     click.echo(f"  Output directory: {output_dir}")
 
     db = DatabaseConnection(db_url, schema=schema)
@@ -272,11 +286,97 @@ def dump_all(db_url: str, schema: str, output_dir: str) -> None:
 
     try:
         dumper = DataDumper(db)
-        dumper.dump_all_tables_to_csv(output_dir)
+
+        if config:
+            # Dump only tables in config
+            click.echo(f"Loading configuration from '{config}'...")
+            config_obj = GenerationConfig.from_yaml(config)
+            table_names = [table.name for table in config_obj.tables]
+            click.echo(f"Dumping {len(table_names)} tables from config...")
+
+            os.makedirs(output_dir, exist_ok=True)
+            for table_name in table_names:
+                output_path = os.path.join(output_dir, f"{table_name}.csv")
+                dumper.dump_table_to_csv(table_name, output_path)
+        else:
+            # Dump all tables
+            dumper.dump_all_tables_to_csv(output_dir)
+
         click.echo(f"✓ Export complete")
 
     finally:
         db.disconnect()
+
+
+@main.command()
+@click.option(
+    "--csv-dir",
+    type=click.Path(exists=True),
+    required=True,
+    help="Directory containing CSV files (from dump-all)",
+)
+@click.option(
+    "--config",
+    type=click.Path(exists=True),
+    required=True,
+    help="YAML configuration file (schema.yaml)",
+)
+@click.option(
+    "--output",
+    type=click.Path(),
+    default="objects.jsonl",
+    help="Output JSONL file path",
+)
+def objectify(csv_dir: str, config: str, output: str) -> None:
+    """Convert CSV data to objects with relationship index.
+
+    Reads CSV files and generates JSONL where each row is:
+    {table, id, relates: {other_table: [ids]}}
+
+    Example:
+        datamultiplier dump-all --db-url ... --output-dir ./data
+        datamultiplier objectify --csv-dir ./data --config schema.yaml --output objects.jsonl
+    """
+    click.echo(f"Loading configuration from '{config}'...")
+    config_obj = GenerationConfig.from_yaml(config)
+
+    click.echo(f"Building relationship index from CSV files in '{csv_dir}'...")
+    indexer = RelationIndexer(csv_dir, config_obj)
+    row_count = indexer.objectify(output)
+
+    click.echo(f"✓ Wrote {row_count:,} objects to '{output}'")
+    click.echo(f"\nNext: Use --group to cluster related objects:")
+    click.echo(f"  datamultiplier group-objects --input {output} --output grouped.jsonl")
+
+
+@main.command()
+@click.option(
+    "--input",
+    type=click.Path(exists=True),
+    required=True,
+    help="JSONL file from objectify",
+)
+@click.option(
+    "--output",
+    type=click.Path(),
+    default="grouped.jsonl",
+    help="Output grouped JSONL file path",
+)
+def group_objects(input: str, output: str) -> None:
+    """Group related objects into connected components.
+
+    Merges objects that are transitively related via foreign keys.
+
+    Example:
+        datamultiplier group-objects --input objects.jsonl --output grouped.jsonl
+    """
+    click.echo(f"Grouping related objects from '{input}'...")
+
+    config = GenerationConfig()  # Minimal config for grouping
+    indexer = RelationIndexer(".", config)  # csv_dir unused for grouping
+    group_count = indexer.group_objects(input, output)
+
+    click.echo(f"✓ Created {group_count:,} groups in '{output}'")
 
 
 if __name__ == "__main__":
