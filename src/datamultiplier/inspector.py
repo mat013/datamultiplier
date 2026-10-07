@@ -16,7 +16,9 @@ class SchemaInspector:
         config = GenerationConfig()
 
         table_names = self.db.get_all_tables()
-        for table_name in table_names:
+        print(f"\nInspecting {len(table_names)} tables:")
+        for i, table_name in enumerate(table_names, 1):
+            print(f"  {i:2d}. {table_name}")
             table_config = self._inspect_table(table_name)
             config.tables.append(table_config)
 

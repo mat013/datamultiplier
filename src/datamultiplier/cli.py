@@ -77,10 +77,7 @@ def inspect(db_url: str, schema: str, output: str) -> None:
         inspector = SchemaInspector(db)
         config = inspector.inspect_all_tables()
 
-        click.echo(f"✓ Found {len(config.tables)} tables")
-        for table in config.tables:
-            click.echo(f"  - {table.name}: {len(table.columns)} columns")
-
+        click.echo(f"\n✓ Found {len(config.tables)} tables")
         click.echo(f"\nGenerating configuration...")
         config.to_yaml(output)
         click.echo(f"✓ Configuration saved to '{output}'")
