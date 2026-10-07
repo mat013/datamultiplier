@@ -87,13 +87,11 @@ class RelationIndexer:
                     relates = defaultdict(list)
 
                     # Add parents (rows this row points to via FK)
-                    for col_name, (parent_table, parent_pk) in self.fk_mapping.items():
-                        if col_name.split("_")[0] == table_name or True:  # Check if FK is in this table
-                            for (tbl, fk_col, _), (ref_tbl, _) in self.fk_mapping.items():
-                                if tbl == table_name and ref_tbl == parent_table:
-                                    parent_id = row.get(fk_col)
-                                    if parent_id:
-                                        relates[parent_table].append(str(parent_id))
+                    for (tbl, fk_col), (parent_table, parent_pk) in self.fk_mapping.items():
+                        if tbl == table_name:  # This FK belongs to the current table
+                            parent_id = row.get(fk_col)
+                            if parent_id:
+                                relates[parent_table].append(str(parent_id))
 
                     # Add children (rows that point to this row via FK)
                     for child_table, fk_col, _ in child_fks.get(table_name, []):
