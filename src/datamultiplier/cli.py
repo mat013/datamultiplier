@@ -539,16 +539,19 @@ def load(
         click.echo(f"\nLoading data...")
         loader = DataLoader(db)
 
+        def on_progress(msg: str) -> None:
+            """Callback for progress messages."""
+            click.echo(msg)
+
         if is_file:
-            row_count = loader.load_file(input, table, truncate=truncate)
+            row_count = loader.load_file(input, table, truncate=truncate, on_progress=on_progress)
             click.echo(f"✓ Loaded {row_count:,} rows into '{table}'")
         else:
-            results = loader.load_directory(input, respect_fk_order=not disable_fks, truncate=truncate)
+            results = loader.load_directory(
+                input, respect_fk_order=not disable_fks, truncate=truncate, on_progress=on_progress
+            )
             total_rows = sum(results.values())
-            click.echo(f"\nLoaded {len(results)} tables:")
-            for tbl, count in results.items():
-                click.echo(f"  {tbl}: {count:,} rows")
-            click.echo(f"\nTotal: {total_rows:,} rows")
+            click.echo(f"\n✓ Loaded {len(results)} tables ({total_rows:,} rows total)")
 
         # Re-enable FKs if requested
         if enable_fks:
