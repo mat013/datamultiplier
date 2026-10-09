@@ -86,6 +86,33 @@ datamultiplier dump-all --db-url postgresql://user:pass@localhost/mydb --output-
 datamultiplier dump-all --db-url postgresql://user:pass@localhost/mydb --config schema.yaml --output-dir ./data
 ```
 
+#### 4b. Load Data from CSV
+
+Load CSV files back into the database (reverse of `dump`):
+
+**Single file:**
+```bash
+datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input users.csv --table users
+```
+
+**Directory (all CSV files):**
+```bash
+# Load all CSV files from a directory
+datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./data
+
+# For faster loading with FK constraints, disable them first
+datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./data --disable-fks --enable-fks
+```
+
+**Workflow example (dump and reload):**
+```bash
+# Dump all tables
+datamultiplier dump-all --db-url postgresql://user:pass@localhost/mydb --output-dir ./backup
+
+# (Later) reload them, with FK optimization
+datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./backup --disable-fks --enable-fks
+```
+
 #### 5. Convert to Object Format (Optional)
 
 Transform relational CSV data into objects with relationship indices. Each row becomes a JSON object showing which rows it relates to via foreign keys:

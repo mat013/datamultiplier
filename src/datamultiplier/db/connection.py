@@ -230,15 +230,20 @@ class DatabaseConnection:
         query = f"ALTER TABLE {self.schema}.{table_name} DROP CONSTRAINT {constraint_name}"
         self.execute_write(query)
 
-    def add_fk(self, table_name: str, constraint_name: str, definition: str) -> None:
+    def add_fk(self, table_name: str, constraint_name: str, definition: str, not_valid: bool = False) -> None:
         """Add a foreign key constraint.
 
         Args:
             table_name: Table name
             constraint_name: Constraint name
             definition: Complete definition from pg_get_constraintdef (includes FOREIGN KEY ... part)
+            not_valid: If True, add constraint as NOT VALID (skips validation, faster for large tables)
         """
-        # Extract the constraint part from definition (e.g., "FOREIGN KEY (user_id) REFERENCES users(id)")
-        # The definition looks like: "FOREIGN KEY (user_id) REFERENCES schema.table(col)"
         query = f"ALTER TABLE {self.schema}.{table_name} ADD CONSTRAINT {constraint_name} {definition}"
+        if not_valid:
+            query += " NOT VALID"
         self.execute_write(query)
+
+        if not_valid:
+            validate_query = f"ALTER TABLE {self.schema}.{table_name} VALIDATE CONSTRAINT {constraint_name}"
+            self.execute_write(validate_query)
