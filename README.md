@@ -102,6 +102,9 @@ datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./dat
 
 # For faster loading with FK constraints, disable them first
 datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./data --disable-fks --enable-fks
+
+# Load and replace existing data (truncate tables first)
+datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./data --truncate
 ```
 
 **Workflow example (dump and reload):**
@@ -109,8 +112,8 @@ datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./dat
 # Dump all tables
 datamultiplier dump-all --db-url postgresql://user:pass@localhost/mydb --output-dir ./backup
 
-# (Later) reload them, with FK optimization
-datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./backup --disable-fks --enable-fks
+# (Later) reload them, replacing all existing data
+datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./backup --truncate --disable-fks --enable-fks
 ```
 
 #### 5. Convert to Object Format (Optional)

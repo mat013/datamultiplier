@@ -482,6 +482,11 @@ def objectify(csv_dir: str, config: str, output: str) -> None:
     default="fk_constraints.json",
     help="State file for FK constraints",
 )
+@click.option(
+    "--truncate",
+    is_flag=True,
+    help="Truncate tables before loading",
+)
 def load(
     db_url: str,
     schema: str,
@@ -490,6 +495,7 @@ def load(
     disable_fks: bool,
     enable_fks: bool,
     state_file: str,
+    truncate: bool,
 ) -> None:
     """Load CSV file(s) into database.
 
@@ -534,10 +540,10 @@ def load(
         loader = DataLoader(db)
 
         if is_file:
-            row_count = loader.load_file(input, table)
+            row_count = loader.load_file(input, table, truncate=truncate)
             click.echo(f"✓ Loaded {row_count:,} rows into '{table}'")
         else:
-            results = loader.load_directory(input, respect_fk_order=not disable_fks)
+            results = loader.load_directory(input, respect_fk_order=not disable_fks, truncate=truncate)
             total_rows = sum(results.values())
             click.echo(f"\nLoaded {len(results)} tables:")
             for tbl, count in results.items():

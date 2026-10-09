@@ -14,12 +14,13 @@ class DataLoader:
         """Initialize loader with database connection."""
         self.db = db
 
-    def load_file(self, file_path: str, table_name: Optional[str] = None) -> int:
+    def load_file(self, file_path: str, table_name: Optional[str] = None, truncate: bool = False) -> int:
         """Load a single CSV file into a table.
 
         Args:
             file_path: Path to CSV file
             table_name: Table name to load into (default: filename without .csv)
+            truncate: If True, truncate table before loading
 
         Returns:
             Number of rows loaded
@@ -41,6 +42,10 @@ class DataLoader:
         # Check table exists
         if not self.db.table_exists(table_name):
             raise ValueError(f"Table '{table_name}' does not exist")
+
+        # Truncate if requested
+        if truncate:
+            self.db.execute_write(f"TRUNCATE TABLE {table_name}")
 
         # Read CSV header to get column names
         with open(file_path, "r") as f:
@@ -64,7 +69,7 @@ class DataLoader:
 
         return row_count
 
-    def load_directory(self, dir_path: str, respect_fk_order: bool = False) -> dict:
+    def load_directory(self, dir_path: str, respect_fk_order: bool = False, truncate: bool = False) -> dict:
         """Load all CSV files from a directory.
 
         Args:
@@ -72,6 +77,7 @@ class DataLoader:
             respect_fk_order: If True, load tables in FK dependency order
                              (parents before children). Falls back to
                              alphabetical order if dependencies can't be resolved.
+            truncate: If True, truncate each table before loading
 
         Returns:
             Dictionary mapping table names to row counts
@@ -99,7 +105,7 @@ class DataLoader:
             file_path = dir_path_obj / f"{table_name}.csv"
             if file_path.exists():
                 try:
-                    row_count = self.load_file(str(file_path), table_name)
+                    row_count = self.load_file(str(file_path), table_name, truncate=truncate)
                     results[table_name] = row_count
                 except Exception as e:
                     raise RuntimeError(f"Failed to load '{table_name}': {e}")
