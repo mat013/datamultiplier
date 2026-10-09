@@ -116,6 +116,43 @@ datamultiplier dump-all --db-url postgresql://user:pass@localhost/mydb --output-
 datamultiplier load --db-url postgresql://user:pass@localhost/mydb --input ./backup --truncate --disable-fks --enable-fks
 ```
 
+#### 4c. Sample Column Statistics (Optional)
+
+Analyse the CSV files from `dump-all` and write a `<table>.stat.json` next to each CSV, describing the values in every column. No database connection is needed.
+
+```bash
+datamultiplier samples --csv-dir ./data --config schema.yaml
+datamultiplier samples --csv-dir ./data --table orders --max-text-length 50 --max-distinct 30
+```
+
+How each column is described:
+
+- **Primary key, foreign key, auto increment** (from `--config`): `skipped`. No range is calculated for ids.
+- **Numbers**: `from`/`to` (min/max) and `top`, the most frequent values. If the column has at most `--max-distinct` distinct values, `top` contains all of them, so the full distribution is shown.
+- **Dates and timestamps**: `from`/`to` as ISO strings.
+- **Short text** (every value at most `--max-text-length` characters) with at most `--max-distinct` distinct values: `enum` with the count of each value.
+- **Long text, or text with too many distinct values**: `text` with up to `--max-samples` example values.
+- **Empty cells** are counted as `nulls`. A column with only empty cells is `empty`.
+
+Without `--config` the column type is inferred from the values, and no column is skipped. Numbers with many distinct values are then reported with `top` and `truncated: true`.
+
+Example output:
+```json
+{
+  "table": "orders",
+  "rows": 1000000,
+  "columns": {
+    "id":         {"kind": "skipped", "reason": "primary_key"},
+    "amount":     {"kind": "number", "from": 10, "to": 9999, "nulls": 0, "top": {"100": 4200, "250": 3100}},
+    "created_at": {"kind": "temporal", "from": "2023-01-01T00:00:00", "to": "2024-12-31T00:00:00", "nulls": 0},
+    "status":     {"kind": "enum", "counts": {"NEW": 500, "DONE": 300}, "nulls": 0},
+    "notes":      {"kind": "text", "samples": ["lang tekst 1", "..."], "nulls": 12}
+  }
+}
+```
+
+The statistics are streamed once per file, so memory use stays flat for large CSV files.
+
 #### 5. Convert to Object Format (Optional)
 
 Transform relational CSV data into objects with relationship indices. Each row becomes a JSON object showing which rows it relates to via foreign keys:

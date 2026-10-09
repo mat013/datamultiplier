@@ -13,6 +13,7 @@ from .inspector import SchemaInspector
 from .generator import DataGenerator
 from .dumper import DataDumper
 from .loader import DataLoader
+from .sampler import SampleOptions, TableSampler, write_stat
 from .config import GenerationConfig
 from .objectifier import RelationIndexer
 
@@ -684,6 +685,96 @@ def enable_fks(db_url: str, schema: str, state_file: str, not_valid: bool) -> No
 
     finally:
         db.disconnect()
+
+
+@main.command()
+@click.option(
+    "--csv-dir",
+    type=click.Path(exists=True, file_okay=False),
+    required=True,
+    help="Directory containing CSV files (from dump-all)",
+)
+@click.option(
+    "--config",
+    type=click.Path(exists=True),
+    default=None,
+    help="YAML config (schema.yaml) for column types; primary/foreign keys are skipped",
+)
+@click.option("--table", default=None, help="Only sample this table (default: all CSV files)")
+@click.option(
+    "--max-text-length",
+    type=int,
+    default=70,
+    show_default=True,
+    help="Texts up to this length count as short (enum candidates)",
+)
+@click.option(
+    "--max-distinct",
+    type=int,
+    default=20,
+    show_default=True,
+    help="Maximum distinct values for an enum or full distribution",
+)
+@click.option(
+    "--max-samples",
+    type=int,
+    default=20,
+    show_default=True,
+    help="Number of example values kept for long or high-cardinality text",
+)
+@click.option(
+    "--top",
+    type=int,
+    default=10,
+    show_default=True,
+    help="Number of most frequent values kept for numeric columns with many distinct values",
+)
+def samples(
+    csv_dir: str,
+    config: str,
+    table: str,
+    max_text_length: int,
+    max_distinct: int,
+    max_samples: int,
+    top: int,
+) -> None:
+    """Analyse CSV files and write <table>.stat.json next to each CSV.
+
+    Numbers and dates get min/max; numbers also get their most frequent values.
+    Short texts with few distinct values become enums with counts; other texts
+    get a sample of values.
+
+    Example:
+        datamultiplier samples --csv-dir ./data --config schema.yaml
+    """
+    csv_dir_path = Path(csv_dir)
+    if table:
+        files = [csv_dir_path / f"{table}.csv"]
+        if not files[0].exists():
+            click.echo(f"✗ No CSV file for table '{table}' in '{csv_dir}'")
+            raise click.Abort()
+    else:
+        files = sorted(csv_dir_path.glob("*.csv"))
+        if not files:
+            click.echo(f"✗ No CSV files found in '{csv_dir}'")
+            raise click.Abort()
+
+    config_obj = GenerationConfig.from_yaml(config) if config else None
+    sampler = TableSampler(
+        SampleOptions(
+            max_text_length=max_text_length,
+            max_distinct=max_distinct,
+            max_samples=max_samples,
+            top=top,
+        )
+    )
+
+    for csv_path in files:
+        table_config = config_obj.get_table(csv_path.stem) if config_obj else None
+        stat = sampler.sample_file(csv_path, table_config)
+        out_path = csv_path.with_name(f"{csv_path.stem}.stat.json")
+        write_stat(stat, out_path)
+        click.echo(f"✓ {csv_path.stem}: {stat['rows']:,} rows -> '{out_path}'")
 
 
 if __name__ == "__main__":
