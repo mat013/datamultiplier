@@ -2,6 +2,7 @@
 
 import click
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -380,6 +381,167 @@ def group_objects(input: str, output: str) -> None:
     group_count = indexer.group_objects(input, output)
 
     click.echo(f"✓ Created {group_count:,} groups in '{output}'")
+
+
+@main.command()
+@click.option(
+    "--db-url",
+    required=True,
+    envvar="DATABASE_URL",
+    help="PostgreSQL connection URL",
+)
+@click.option(
+    "--schema",
+    default=None,
+    help="Database schema name (default: user's search_path)",
+)
+@click.option(
+    "--state-file",
+    type=click.Path(),
+    default="fk_constraints.json",
+    help="File to store FK definitions for re-enabling",
+)
+def disable_fks(db_url: str, schema: str, state_file: str) -> None:
+    """Disable all foreign key constraints in the schema.
+
+    Saves constraint definitions to a state file for later re-enabling.
+    This is useful for faster bulk data insertion.
+
+    Example:
+        datamultiplier disable-fks --db-url postgresql://user:pass@localhost/mydb
+        datamultiplier generate --db-url ... --config schema.yaml
+        datamultiplier enable-fks --db-url postgresql://user:pass@localhost/mydb
+    """
+    if Path(state_file).exists():
+        click.echo(f"✗ State file '{state_file}' already exists.")
+        click.echo(f"  Remove it first if you want to disable constraints again.")
+        raise click.Abort()
+
+    click.echo(f"Connecting to database...")
+    db = DatabaseConnection(db_url, schema=schema)
+    db.connect()
+    click.echo(f"✓ Connected")
+
+    try:
+        click.echo(f"\nFetching foreign key definitions from schema '{schema}'...")
+        fk_defs = db.get_fk_definitions()
+
+        if not fk_defs:
+            click.echo(f"No foreign keys found in schema '{schema}'")
+            return
+
+        click.echo(f"Found {len(fk_defs)} foreign key constraints")
+        click.echo(f"\nDisabling foreign keys...")
+
+        for fk in fk_defs:
+            table = fk["table_name"]
+            constraint = fk["constraint_name"]
+            try:
+                db.drop_fk(table, constraint)
+                click.echo(f"  ✓ Dropped {table}.{constraint}")
+            except Exception as e:
+                click.echo(f"  ✗ Failed to drop {table}.{constraint}: {e}")
+                raise
+
+        # Save definitions to state file
+        state_data = [
+            {
+                "table_name": fk["table_name"],
+                "constraint_name": fk["constraint_name"],
+                "definition": fk["definition"],
+            }
+            for fk in fk_defs
+        ]
+
+        with open(state_file, "w") as f:
+            json.dump(state_data, f, indent=2)
+
+        click.echo(f"\n✓ Disabled {len(fk_defs)} foreign keys")
+        click.echo(f"✓ Saved definitions to '{state_file}'")
+        click.echo(f"\nNext: Run your generate/insert commands, then:")
+        click.echo(f"  datamultiplier enable-fks --db-url {db_url} --schema {schema} --state-file {state_file}")
+
+    finally:
+        db.disconnect()
+
+
+@main.command()
+@click.option(
+    "--db-url",
+    required=True,
+    envvar="DATABASE_URL",
+    help="PostgreSQL connection URL",
+)
+@click.option(
+    "--schema",
+    default=None,
+    help="Database schema name (default: user's search_path)",
+)
+@click.option(
+    "--state-file",
+    type=click.Path(exists=True),
+    default="fk_constraints.json",
+    help="State file from disable-fks command",
+)
+@click.option(
+    "--not-valid",
+    is_flag=True,
+    help="Skip validation of constraint (faster, but leaves constraint in INVALID state)",
+)
+def enable_fks(db_url: str, schema: str, state_file: str, not_valid: bool) -> None:
+    """Re-enable foreign key constraints.
+
+    Reads constraint definitions from the state file created by disable-fks
+    and adds them back. If data violates constraints, the command will fail.
+
+    Example:
+        datamultiplier enable-fks --db-url postgresql://user:pass@localhost/mydb
+    """
+    if not Path(state_file).exists():
+        click.echo(f"✗ State file '{state_file}' not found.")
+        click.echo(f"  Run 'disable-fks' first to create it.")
+        raise click.Abort()
+
+    click.echo(f"Loading constraint definitions from '{state_file}'...")
+    with open(state_file, "r") as f:
+        state_data = json.load(f)
+
+    click.echo(f"Connecting to database...")
+    db = DatabaseConnection(db_url, schema=schema)
+    db.connect()
+    click.echo(f"✓ Connected")
+
+    try:
+        click.echo(f"\nRe-enabling {len(state_data)} foreign key constraints...")
+
+        failed = False
+        for item in state_data:
+            table = item["table_name"]
+            constraint = item["constraint_name"]
+            definition = item["definition"]
+
+            try:
+                db.add_fk(table, constraint, definition)
+                click.echo(f"  ✓ Added {table}.{constraint}")
+            except Exception as e:
+                click.echo(f"  ✗ Failed to add {table}.{constraint}")
+                click.echo(f"    Error: {e}")
+                failed = True
+
+        if failed:
+            click.echo(f"\n✗ Some constraints could not be re-enabled.")
+            click.echo(f"   This usually means your data violates the constraint.")
+            click.echo(f"   Fix the data and try again.")
+            raise click.Abort()
+
+        # Clean up state file on success
+        Path(state_file).unlink()
+
+        click.echo(f"\n✓ All {len(state_data)} foreign keys re-enabled")
+        click.echo(f"✓ Removed state file '{state_file}'")
+
+    finally:
+        db.disconnect()
 
 
 if __name__ == "__main__":

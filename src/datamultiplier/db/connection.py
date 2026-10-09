@@ -204,3 +204,41 @@ class DatabaseConnection:
         """
         result = self.execute(query, (self.schema,))
         return [row["table_name"] for row in result]
+
+    def get_fk_definitions(self) -> list[dict]:
+        """Get all foreign key definitions in the schema.
+
+        Returns list of dicts with: constraint_name, table_name, definition
+        """
+        query = """
+            SELECT
+                c.conname AS constraint_name,
+                t.relname AS table_name,
+                pg_get_constraintdef(c.oid) AS definition
+            FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            WHERE n.nspname = %s
+                AND c.contype = 'f'
+            ORDER BY t.relname, c.conname
+        """
+        result = self.execute(query, (self.schema,))
+        return result
+
+    def drop_fk(self, table_name: str, constraint_name: str) -> None:
+        """Drop a foreign key constraint."""
+        query = f"ALTER TABLE {self.schema}.{table_name} DROP CONSTRAINT {constraint_name}"
+        self.execute_write(query)
+
+    def add_fk(self, table_name: str, constraint_name: str, definition: str) -> None:
+        """Add a foreign key constraint.
+
+        Args:
+            table_name: Table name
+            constraint_name: Constraint name
+            definition: Complete definition from pg_get_constraintdef (includes FOREIGN KEY ... part)
+        """
+        # Extract the constraint part from definition (e.g., "FOREIGN KEY (user_id) REFERENCES users(id)")
+        # The definition looks like: "FOREIGN KEY (user_id) REFERENCES schema.table(col)"
+        query = f"ALTER TABLE {self.schema}.{table_name} ADD CONSTRAINT {constraint_name} {definition}"
+        self.execute_write(query)

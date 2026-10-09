@@ -49,6 +49,21 @@ Edit `schema.yaml` to customize row counts, data generation rules, and relations
 
 #### 3. Generate Test Data
 
+For faster bulk inserts, you can temporarily disable foreign key constraints:
+
+```bash
+# Disable constraints before generation
+datamultiplier disable-fks --db-url postgresql://user:pass@localhost/mydb
+
+# Generate data (much faster without FK checks)
+datamultiplier generate --db-url postgresql://user:pass@localhost/mydb --config schema.yaml --rows 1000000 --seed 42
+
+# Re-enable constraints after generation
+datamultiplier enable-fks --db-url postgresql://user:pass@localhost/mydb
+```
+
+Or run without disabling constraints (slower but validates as you go):
+
 ```bash
 datamultiplier generate --db-url postgresql://user:pass@localhost/mydb --config schema.yaml --rows 1000000 --seed 42
 ```
