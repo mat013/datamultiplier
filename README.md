@@ -167,6 +167,27 @@ The statistics are streamed once per file, so memory use stays flat for large CS
 
 Here 2 customers have no orders, 1 customer has 1 order, 1 customer has 2 orders, and 1 customer has 4 orders. If a child CSV is missing, that relation is skipped and reported.
 
+#### 4d. Extract Related Rows (Reproduce a Problem)
+
+Given one row, extract every row connected to it through foreign keys, followed recursively in both directions (parents up, children down). The result is written as one CSV per table, in the same format as `dump-all`:
+
+```bash
+datamultiplier extract --table orders --id 12345 --output-dir ./repro --max-rows 10000
+```
+
+The extraction runs in a single read-only, repeatable-read transaction, so the result is a consistent snapshot and the source database is not changed. Tables are listed in breadth-first order from the seed row, and self-references and cycles are handled.
+
+**Moving the data to another environment:**
+```bash
+# In the other environment, with an empty copy of the schema
+datamultiplier load --db-url postgresql://user:pass@other-host/mydb --input ./repro --disable-fks --enable-fks
+```
+
+**Limits:**
+- `--max-rows` is a safety brake on the total number of rows. When it is reached the output is marked as incomplete and a warning is printed. Parent rows may then be missing, so use `load --disable-fks` without `--enable-fks`, or raise the limit.
+- `--id-column` is needed if the table has no single primary key, or if the id refers to another column.
+- The output directory must be empty or not exist.
+
 #### 5. Convert to Object Format (Optional)
 
 Transform relational CSV data into objects with relationship indices. Each row becomes a JSON object showing which rows it relates to via foreign keys:

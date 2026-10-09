@@ -194,6 +194,47 @@ class DatabaseConnection:
         result = self.execute(query, (self.schema, table_name))
         return result[0]["column_name"] if result else None
 
+    def get_primary_key_columns(self, table_name: str) -> list[str]:
+        """Get primary key column names in key order (empty if none)."""
+        query = """
+            SELECT a.attname AS column_name
+            FROM pg_index i
+            JOIN pg_class t ON t.oid = i.indrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            CROSS JOIN LATERAL unnest(i.indkey::int2[]) WITH ORDINALITY AS k(attnum, ord)
+            JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = k.attnum
+            WHERE i.indisprimary AND n.nspname = %s AND t.relname = %s
+            ORDER BY k.ord
+        """
+        return [row["column_name"] for row in self.execute(query, (self.schema, table_name))]
+
+    def get_fk_relations(self) -> list[dict]:
+        """Get all foreign keys in the schema with their column lists (composite keys supported)."""
+        query = """
+            SELECT
+                t.relname AS child_table,
+                rt.relname AS parent_table,
+                ARRAY(
+                    SELECT a.attname
+                    FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+                    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+                    ORDER BY k.ord
+                ) AS child_columns,
+                ARRAY(
+                    SELECT a.attname
+                    FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, ord)
+                    JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum
+                    ORDER BY k.ord
+                ) AS parent_columns
+            FROM pg_constraint c
+            JOIN pg_class t ON c.conrelid = t.oid
+            JOIN pg_namespace n ON t.relnamespace = n.oid
+            JOIN pg_class rt ON c.confrelid = rt.oid
+            JOIN pg_namespace rn ON rt.relnamespace = rn.oid
+            WHERE c.contype = 'f' AND n.nspname = %s AND rn.nspname = %s
+        """
+        return self.execute(query, (self.schema, self.schema))
+
     def get_all_tables(self) -> list[str]:
         """Get list of all table names in the database."""
         query = """

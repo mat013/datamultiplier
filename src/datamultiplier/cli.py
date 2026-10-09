@@ -14,6 +14,7 @@ from .generator import DataGenerator
 from .dumper import DataDumper
 from .loader import DataLoader
 from .sampler import SampleOptions, TableSampler, compute_relations, write_stat
+from .extractor import PostgresSource, RowExtractor, write_csv_dir
 from .config import GenerationConfig
 from .objectifier import RelationIndexer
 
@@ -781,6 +782,92 @@ def samples(
         out_path = csv_path.with_name(f"{csv_path.stem}.stat.json")
         write_stat(stat, out_path)
         click.echo(f"✓ {csv_path.stem}: {stat['rows']:,} rows -> '{out_path}'")
+
+
+@main.command()
+@click.option(
+    "--db-url",
+    required=True,
+    envvar="DATABASE_URL",
+    help="PostgreSQL connection URL",
+)
+@click.option(
+    "--schema",
+    default=None,
+    help="Database schema name (default: user's search_path)",
+)
+@click.option("--table", required=True, help="Table containing the seed row")
+@click.option("--id", "id_value", required=True, help="Value of the seed row's id")
+@click.option(
+    "--id-column",
+    default=None,
+    help="Column the id refers to (default: the table's single primary key column)",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(file_okay=False),
+    default="./extract",
+    show_default=True,
+    help="Directory for the CSV files (must be empty or not exist)",
+)
+@click.option(
+    "--max-rows",
+    type=int,
+    default=10000,
+    show_default=True,
+    help="Stop after this many rows in total and mark the result as incomplete",
+)
+def extract(
+    db_url: str,
+    schema: str,
+    table: str,
+    id_value: str,
+    id_column: str,
+    output_dir: str,
+    max_rows: int,
+) -> None:
+    """Extract all rows related to one row, following foreign keys both ways.
+
+    Walks parents and children recursively (breadth-first) from the seed row and
+    writes one CSV per table in the same format as dump-all, so the result can be
+    loaded in another environment with the load command.
+
+    Example:
+        datamultiplier extract --table orders --id 12345 --output-dir ./repro
+    """
+    out_dir = Path(output_dir)
+    if out_dir.exists() and any(out_dir.glob("*.csv")):
+        click.echo(f"✗ '{output_dir}' already contains CSV files; choose an empty directory")
+        raise click.Abort()
+
+    click.echo(f"Connecting to database...")
+    db = DatabaseConnection(db_url, schema=schema)
+    db.connect()
+    click.echo(f"✓ Connected")
+
+    def on_progress(tbl: str, added: int, total: int) -> None:
+        click.echo(f"  {tbl}: +{added:,} rows (total {total:,})")
+
+    try:
+        source = PostgresSource(db)
+        with source.snapshot():
+            click.echo(f"\nExtracting rows related to {table} = {id_value}...")
+            result = RowExtractor(source, max_rows, on_progress).extract(table, id_value, id_column)
+
+        write_csv_dir(result, out_dir)
+        total = sum(len(rows) for rows in result.rows.values())
+        click.echo(f"\n✓ Extracted {total:,} rows from {len(result.rows)} tables to '{output_dir}'")
+
+        if result.truncated:
+            click.echo(f"⚠ --max-rows ({max_rows:,}) reached: the result is INCOMPLETE.")
+            click.echo(f"  Some parent rows may be missing, so enable-fks/load --enable-fks")
+            click.echo(f"  will fail. Use load --disable-fks without --enable-fks, or raise --max-rows.")
+
+    except ValueError as e:
+        click.echo(f"✗ {e}")
+        raise click.Abort()
+    finally:
+        db.disconnect()
 
 
 if __name__ == "__main__":
