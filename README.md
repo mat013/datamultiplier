@@ -10,6 +10,29 @@ PostgreSQL test data generator for large-scale relational datasets. Creates 1M+ 
 pip install -e ".[dev]"
 ```
 
+### Environment Configuration
+
+To avoid repeating database connection arguments, create a `.env` file in your project root:
+
+```bash
+# .env
+DATABASE_URL=postgresql://user:pass@localhost/mydb
+```
+
+The tool automatically loads variables from `.env` at startup. You can then omit `--db-url` from commands:
+
+```bash
+# Uses DATABASE_URL from .env
+datamultiplier inspect --output schema.yaml
+datamultiplier generate --config schema.yaml
+```
+
+Or override any variable from the command line:
+```bash
+# This takes precedence over .env
+datamultiplier inspect --db-url postgresql://other:host/db --output schema.yaml
+```
+
 ### Usage
 
 #### 1. Inspect Database Schema

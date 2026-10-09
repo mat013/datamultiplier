@@ -3,6 +3,9 @@
 import click
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from .db.connection import DatabaseConnection
 from .inspector import SchemaInspector
