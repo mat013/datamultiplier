@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
-from .config import ColumnConfig, TableConfig
+from .config import ColumnConfig, GenerationConfig, TableConfig
 
 MAX_TRACKED = 10_000
 SAMPLE_SEED = 42
@@ -258,6 +258,71 @@ class TableSampler:
             "rows": rows,
             "columns": {acc.name: acc.result() for acc in accumulators},
         }
+
+
+def _iter_column(csv_path: Path, column: str) -> Iterator[str]:
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        try:
+            header = next(reader)
+        except StopIteration:
+            return
+        if column not in header:
+            raise ValueError(f"Kolonnen '{column}' findes ikke i '{csv_path.name}'")
+        idx = header.index(column)
+        for row in reader:
+            yield row[idx] if idx < len(row) else ""
+
+
+def compute_relations(
+    parent_table: str, csv_dir: Path, config: GenerationConfig
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Count children per parent row for every FK that points at parent_table.
+
+    Returns the relations keyed by "child_table.child_column", and the FKs
+    skipped because the child CSV is missing.
+    """
+    relations: dict[str, dict[str, Any]] = {}
+    skipped: list[str] = []
+    parent_path = csv_dir / f"{parent_table}.csv"
+
+    for table in config.tables:
+        for col in table.columns:
+            if not col.foreign_key:
+                continue
+            ref_table, ref_column = col.foreign_key.split(".", 1)
+            if ref_table != parent_table:
+                continue
+
+            child_path = csv_dir / f"{table.name}.csv"
+            key = f"{table.name}.{col.name}"
+            if not child_path.exists():
+                skipped.append(key)
+                continue
+
+            child_counts: Counter[str] = Counter()
+            child_rows = 0
+            nulls = 0
+            for value in _iter_column(child_path, col.name):
+                child_rows += 1
+                if value == "":
+                    nulls += 1
+                else:
+                    child_counts[value] += 1
+
+            histogram: Counter[int] = Counter()
+            for parent_key in _iter_column(parent_path, ref_column):
+                if parent_key == "":
+                    continue
+                histogram[child_counts.get(parent_key, 0)] += 1
+
+            relations[key] = {
+                "child_rows": child_rows,
+                "null": nulls,
+                "distribution": {str(n): histogram[n] for n in sorted(histogram)},
+            }
+
+    return relations, skipped
 
 
 def write_stat(stat: dict[str, Any], out_path: Path) -> None:

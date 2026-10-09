@@ -6,7 +6,13 @@ import random
 import pytest
 
 from datamultiplier.config import ColumnConfig, TableConfig
-from datamultiplier.sampler import ColumnAccumulator, SampleOptions, TableSampler, write_stat
+from datamultiplier.sampler import (
+    ColumnAccumulator,
+    SampleOptions,
+    TableSampler,
+    compute_relations,
+    write_stat,
+)
 
 
 def _accumulate(values, declared=None, options=None, skip_reason=None):
@@ -171,3 +177,52 @@ def test_write_stat_produces_json_file(tmp_path):
     write_stat({"table": "items", "rows": 1, "columns": {}}, out)
 
     assert json.loads(out.read_text(encoding="utf-8")) == {"table": "items", "rows": 1, "columns": {}}
+
+
+def _fk_config():
+    from datamultiplier.config import GenerationConfig
+
+    return GenerationConfig(
+        tables=[
+            TableConfig(
+                name="customers",
+                row_count=5,
+                columns=[ColumnConfig(name="id", type="integer", primary_key=True)],
+            ),
+            TableConfig(
+                name="orders",
+                row_count=8,
+                columns=[
+                    ColumnConfig(name="id", type="integer", primary_key=True),
+                    ColumnConfig(name="customer_id", type="integer", foreign_key="customers.id"),
+                ],
+            ),
+        ]
+    )
+
+
+def test_compute_relations_counts_children_per_parent(tmp_path):
+    (tmp_path / "customers.csv").write_text("id\n1\n2\n3\n4\n5\n", encoding="utf-8")
+    (tmp_path / "orders.csv").write_text(
+        "id,customer_id\n1,1\n2,2\n3,2\n4,4\n5,4\n6,4\n7,4\n8,\n", encoding="utf-8"
+    )
+
+    relations, skipped = compute_relations("customers", tmp_path, _fk_config())
+
+    assert skipped == []
+    assert relations == {
+        "orders.customer_id": {
+            "child_rows": 8,
+            "null": 1,
+            "distribution": {"0": 2, "1": 1, "2": 1, "4": 1},
+        }
+    }
+
+
+def test_compute_relations_reports_missing_child_csv(tmp_path):
+    (tmp_path / "customers.csv").write_text("id\n1\n", encoding="utf-8")
+
+    relations, skipped = compute_relations("customers", tmp_path, _fk_config())
+
+    assert relations == {}
+    assert skipped == ["orders.customer_id"]

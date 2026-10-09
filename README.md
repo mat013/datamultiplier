@@ -153,6 +153,20 @@ Example output:
 
 The statistics are streamed once per file, so memory use stays flat for large CSV files.
 
+**Relations:** When `--config` is given, each parent table's `.stat.json` also gets a `relations` section with one entry per foreign key pointing at it. `distribution` shows how many parent rows have 0, 1, 2 ... children:
+
+```json
+"relations": {
+  "orders.customer_id": {
+    "child_rows": 8,
+    "null": 1,
+    "distribution": {"0": 2, "1": 1, "2": 1, "4": 1}
+  }
+}
+```
+
+Here 2 customers have no orders, 1 customer has 1 order, 1 customer has 2 orders, and 1 customer has 4 orders. If a child CSV is missing, that relation is skipped and reported.
+
 #### 5. Convert to Object Format (Optional)
 
 Transform relational CSV data into objects with relationship indices. Each row becomes a JSON object showing which rows it relates to via foreign keys:

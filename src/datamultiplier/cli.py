@@ -13,7 +13,7 @@ from .inspector import SchemaInspector
 from .generator import DataGenerator
 from .dumper import DataDumper
 from .loader import DataLoader
-from .sampler import SampleOptions, TableSampler, write_stat
+from .sampler import SampleOptions, TableSampler, compute_relations, write_stat
 from .config import GenerationConfig
 from .objectifier import RelationIndexer
 
@@ -772,6 +772,12 @@ def samples(
     for csv_path in files:
         table_config = config_obj.get_table(csv_path.stem) if config_obj else None
         stat = sampler.sample_file(csv_path, table_config)
+        if config_obj:
+            relations, skipped = compute_relations(csv_path.stem, csv_dir_path, config_obj)
+            if relations:
+                stat["relations"] = relations
+            for key in skipped:
+                click.echo(f"  ! {key}: barn-CSV mangler, relation springes over")
         out_path = csv_path.with_name(f"{csv_path.stem}.stat.json")
         write_stat(stat, out_path)
         click.echo(f"✓ {csv_path.stem}: {stat['rows']:,} rows -> '{out_path}'")
